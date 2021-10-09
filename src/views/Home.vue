@@ -9,7 +9,7 @@
         :key="cluster.name"
         v-bind="cluster"
         @t="t = $event"
-        @expanded="anyClusterExpanded = $event"
+        @expanded="cluster.expanded = $event"
       />
     </div>
   </div>
@@ -18,6 +18,8 @@
 <script>
 import Cluster from "@/components/Cluster";
 import Navigation from "@/components/Navigation";
+
+import faker from "faker";
 
 import { scaleLinear } from "d3-scale";
 
@@ -30,60 +32,139 @@ export default {
   data() {
     return {
       t: 0,
-      anyClusterExpanded: false,
       clusters: [
         {
           name: "Mixed tape",
+          subheading: "Made just for you",
           intersectionRatio: 0,
           isIntersecting: false,
+          expanded: false,
           items: [
             {
               name: "MØ",
-              preview: require("@/assets/videos/cph-short.mp4"),
+              preview: require("@/assets/videos/mo-short.mp4"),
             },
             {
-              name: "Maego",
-              cover: require("@/assets/img/thumbnails/1.jpg"),
+              name: "Birds",
+              preview: require("@/assets/videos/birds.mp4"),
             },
             {
-              name: "KANIS",
-              cover: require("@/assets/img/thumbnails/2.jpg"),
+              name: "Rains",
+              cover: require("@/assets/img/thumbnails/11.jpg"),
             },
             {
-              name: "NIKI",
-              cover: require("@/assets/img/thumbnails/3.jpg"),
+              name: "Flowers",
+              preview: require("@/assets/videos/flower.mp4"),
             },
           ],
         },
         {
           name: "New releases",
+          subheading: "4 videos",
           intersectionRatio: 0,
           isIntersecting: false,
+          expanded: false,
           items: [
             {
-              name: "Maego",
-              cover: require("@/assets/img/thumbnails/5.jpg"),
+              name: "CPH",
+              preview: require("@/assets/videos/cph-short.mp4"),
             },
             {
-              name: "MØ",
+              name: "Flowers",
+              preview: require("@/assets/videos/flowers.mp4"),
+            },
+            {
+              name: "Trains",
               preview: require("@/assets/videos/stockholm-short.mp4"),
             },
             {
-              name: "KANIS",
-              cover: require("@/assets/img/thumbnails/7.jpg"),
-            },
-            {
-              name: "NIKI",
-              cover: require("@/assets/img/thumbnails/8.jpg"),
+              name: "MØ",
+              preview: require("@/assets/videos/mo-short.mp4"),
             },
           ],
         },
-        { name: "Cooking", intersectionRatio: 0, isIntersecting: false },
-        { name: "Shuffle", intersectionRatio: 0, isIntersecting: false },
         {
-          name: "Recently watched",
+          name: "Cooking",
+          subheading: "Because you watched Pasta Queen",
           intersectionRatio: 0,
           isIntersecting: false,
+          expanded: false,
+          items: [
+            {
+              name: "Secco",
+              preview: require("@/assets/videos/eat.mp4"),
+            },
+            {
+              name: "Tomato",
+              preview: require("@/assets/videos/food-short.mp4"),
+            },
+          ],
+        },
+        {
+          name: "Shuffle",
+          subheading: "Roll the dice",
+          intersectionRatio: 0,
+          isIntersecting: false,
+          expanded: false,
+          dark: true,
+          shuffle: true,
+          items: [
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/1.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/2.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/3.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/4.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/5.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/6.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/7.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/8.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/9.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/10.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/11.jpg"),
+            },
+            {
+              name: faker.name.firstName(),
+              cover: require("@/assets/img/thumbnails/12.jpg"),
+            },
+          ],
+        },
+        {
+          name: "Recently watched",
+          subheading: "Past month",
+          intersectionRatio: 0,
+          isIntersecting: false,
+          expanded: false,
         },
       ],
     };
@@ -106,8 +187,6 @@ export default {
     },
     onObserve(entries) {
       entries.forEach((entry) => {
-        if (!entry.isIntersecting) return;
-
         // Cluster
         const cluster = this.clusters[entry.target._index];
 
@@ -123,6 +202,9 @@ export default {
         transform: `translateY(${y}%) translateZ(0px)`,
       };
     },
+    anyClusterExpanded() {
+      return this.clusters.some((cluster) => cluster.expanded);
+    },
   },
   mounted() {
     this.createObserver();
@@ -136,8 +218,10 @@ export default {
 <style lang="scss" scoped>
 .home {
   &.disabled {
-    pointer-events: none;
-    overflow: hidden;
+    .clusters {
+      pointer-events: none;
+      overflow: hidden;
+    }
   }
 
   .cover {
@@ -150,6 +234,7 @@ export default {
     width: 100vw;
     height: 100vh;
     scroll-snap-type: y mandatory;
+    pointer-events: all;
 
     &::-webkit-scrollbar {
       display: none;

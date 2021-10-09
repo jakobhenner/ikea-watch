@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div id="app" class="theme light">
     <router-view />
   </div>
 </template>
@@ -12,6 +12,17 @@
   --color-bg: #fff;
   --size-button-default: 44px;
   --size-button-large: calc(var(--size-button-default) / (24 / 64));
+}
+
+.theme {
+  color: var(--color-fg-primary);
+  background-color: var(--color-bg);
+
+  &.dark {
+    --color-fg-primary: #fff;
+    --color-fg-secondary: #767676;
+    --color-bg: #111;
+  }
 }
 
 /*
@@ -62,5 +73,15 @@ body {
   font-family: Noto IKEA, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.fade-enter,
+.fade-leave-to,
+.fade-leave-active {
+  opacity: 0 !important;
 }
 </style>

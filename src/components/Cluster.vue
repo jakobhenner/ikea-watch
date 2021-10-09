@@ -1,11 +1,11 @@
 <template>
-  <div class="cluster" :class="{ disabled: disabled }">
+  <div class="cluster theme" :class="{ disabled: disabled, dark: dark }">
     <div class="scroller">
       <div
         class="cell"
         ref="Cells"
-        v-for="(item, n) in items"
-        :key="n"
+        v-for="(item, n) in computedItems"
+        :key="n + timeout"
         :style="setStyle(n)"
       >
         <card :t="tween.t" v-bind="getCardProps(n)" :autoplay="n === 0" />
@@ -19,7 +19,7 @@
     <div class="gesture" ref="gesture" v-show="expanded"></div>
     <header :style="headerStyle">
       <h2>{{ name }}</h2>
-      <p class="color-secondary">Made just for you</p>
+      <p class="color-secondary">{{ subheading }}</p>
     </header>
   </div>
 </template>
@@ -39,27 +39,31 @@ export default {
   },
   props: {
     name: String,
+    subheading: String,
     isIntersecting: Boolean,
     intersectionRatio: Number,
+    dark: Boolean,
+    expanded: Boolean,
+    shuffle: Boolean,
     items: {
       type: Array,
       default() {
         return [
           {
-            name: "MØ",
+            name: "Birds",
+            preview: require("@/assets/videos/birds.mp4"),
+          },
+          {
+            name: "Trains",
             preview: require("@/assets/videos/stockholm-short.mp4"),
           },
           {
-            name: "Maego",
+            name: "MØ",
+            preview: require("@/assets/videos/mo-short.mp4"),
+          },
+          {
+            name: "CPH",
             preview: require("@/assets/videos/cph-short.mp4"),
-          },
-          {
-            name: "KANIS",
-            preview: require("@/assets/videos/food-short.mp4"),
-          },
-          {
-            name: "NIKI",
-            preview: require("@/assets/videos/hay-short.mp4"),
           },
         ];
       },
@@ -76,9 +80,10 @@ export default {
         cells: [],
       },
       cellTransforms: [],
-      expanded: false,
       ready: false,
       panYThreshold: 300,
+      timeout: null,
+      computedItems: this.items,
     };
   },
   methods: {
@@ -97,6 +102,7 @@ export default {
     },
     onPanStart(e) {
       //this.setFingerState(true);
+      this.$emit("expanded", true);
     },
     onPanMove(e) {
       let t = this.panT(e.deltaY);
@@ -120,6 +126,8 @@ export default {
     animateView(t) {
       if (this.animation) this.animation.kill();
 
+      this.$emit("expanded", true);
+
       const ease = t === 1 ? "back.inOut(.5)" : "back.out(0.25)";
       const duration = t === 1 ? 1 : 0.75;
 
@@ -131,8 +139,8 @@ export default {
           this.$emit("t", this.tween.t);
         },
         onComplete: () => {
-          this.expanded = this.tween.t === 1;
-          this.$emit("expanded", this.expanded);
+          const bool = this.tween.t === 1;
+          this.$emit("expanded", bool);
         },
       });
     },
@@ -143,6 +151,7 @@ export default {
     },
     getProps(n) {
       if (!this.ready || !this.cellProperties) return;
+
       return this.cellProperties[n];
     },
     setStyle(n) {
@@ -153,6 +162,7 @@ export default {
       return {
         transform: `translateX(${props.offsetX}px) translateZ(0px)`,
         zIndex: props.zIndex,
+        pointerEvents: this.ready && !this.disabled ? "all" : "none",
       };
     },
     getCardProps(n) {
@@ -161,11 +171,56 @@ export default {
       if (!props) return;
 
       return {
-        ...this.items[n],
+        ...this.computedItems[n],
         scale: props.scale,
         x: props.x,
         y: props.y,
       };
+    },
+    getRandomProps(cell) {
+      const bounds = cell.getBoundingClientRect();
+
+      let seed = Math.random();
+
+      const s = scaleLinear().domain([0, 1]).range([0.25, 0.55]);
+
+      const scale = s(seed);
+
+      const maxX = window.innerWidth - bounds.width * scale - 20;
+      const maxY = window.innerHeight - bounds.height * scale - 40;
+
+      const y = scaleLinear()
+        .domain([0, 1])
+        .range([maxY / 4, maxY]);
+      const x = scaleLinear().domain([0, 1]).range([20, maxX]);
+
+      return {
+        scale,
+        x: x(seed),
+        y: y(seed),
+      };
+    },
+    shuffleCells() {
+      if (!this.shuffle || this.expanded) return;
+      if (this.intersectionRatio < 0.1 || !this.isIntersecting) {
+        if (this.timeout) clearTimeout(this.timeout);
+        this.timeout = null;
+        return;
+      }
+
+      this.computedItems = this.computedItems.sort(() => Math.random() - 0.5);
+
+      console.log("shuffle");
+
+      this.$refs.Cells.forEach((cell, n) => {
+        //       const bounds = cell.getBoundingClientRect();
+        //       this.bounds.cells.push(bounds);
+        //
+        const props = this.getRandomProps(cell);
+        this.cellTransforms[n] = props;
+      });
+
+      this.timeout = setTimeout(this.shuffleCells, 700);
     },
   },
   computed: {
@@ -212,16 +267,17 @@ export default {
       if (!this.ready) return;
       const t = this.tween.t;
 
-      return this.cellTransforms.map((_, n) => {
+      return this.computedItems.map((_, n) => {
         const bounds = this.bounds.cells[n];
         const cell = this.cellTransforms[n];
 
         const scale = scaleLinear().domain([0, 1]).range([cell.scale, 1]);
         const offsetX = scaleLinear().domain([0, 1]).range([-bounds.x, 0]);
+
         const x = scaleLinear().domain([0, 1]).range([cell.x, 0]);
         const y = scaleLinear().domain([0, 1]).range([cell.y, 0]);
 
-        const zIndex = this.cellTransforms.length - n;
+        const zIndex = this.shuffle ? n : this.cellTransforms.length - n;
 
         return {
           offsetX: offsetX(t),
@@ -229,6 +285,7 @@ export default {
           x: x(t),
           y: y(t),
           zIndex,
+          timeout: this.timeout,
         };
       });
     },
@@ -239,6 +296,18 @@ export default {
       };
     },
   },
+  watch: {
+    expanded() {
+      if (!this.expanded && this.shuffle) {
+        this.shuffleCells();
+      }
+    },
+    intersectionRatio() {
+      if (this.shuffle && !this.timeout && this.intersectionRatio > 0.1) {
+        this.shuffleCells();
+      }
+    },
+  },
   mounted() {
     this.bounds.self = this.$el.getBoundingClientRect();
     this.bounds.cta = this.$refs.Cta.getBoundingClientRect();
@@ -247,33 +316,24 @@ export default {
       const bounds = cell.getBoundingClientRect();
       this.bounds.cells.push(bounds);
 
-      let seed = Math.random();
-      seed = Math.random();
-      seed = Math.random();
-      seed = Math.random();
+      const props = this.getRandomProps(cell);
 
-      const s = scaleLinear().domain([0, 1]).range([0.25, 0.55]);
-
-      const scale = s(seed);
-
-      const maxX = window.innerWidth - bounds.width * scale - 20;
-      const maxY = window.innerHeight - bounds.height * scale;
-
-      const y = scaleLinear()
-        .domain([0, 1])
-        .range([maxY / 5, maxY]);
-      const x = scaleLinear().domain([0, 1]).range([20, maxX]);
-
-      this.cellTransforms.push({
-        scale,
-        x: x(seed),
-        y: y(seed),
-      });
+      this.cellTransforms.push(props);
     });
+
+    if (this.shuffle) {
+      this.shuffleCells();
+    }
+
     this.initGestures();
     this.$nextTick(() => {
       this.ready = true;
     });
+  },
+  beforeDestroy() {
+    if (this.timeout) {
+      clearInterval(this.timeout);
+    }
   },
 };
 </script>
@@ -284,10 +344,18 @@ export default {
   height: 100vh;
   position: relative;
   scroll-snap-align: start;
-  pointer-events: all;
 
   &.disabled {
     pointer-events: none;
+
+    .scroller,
+    .gesture {
+      pointer-events: none;
+    }
+
+    .scroller .cell {
+      pointer-events: none;
+    }
   }
 
   .scroller {
@@ -298,6 +366,7 @@ export default {
     grid-column-gap: 0px;
     scroll-snap-type: x mandatory;
     overflow-x: scroll;
+    pointer-events: all;
 
     &::-webkit-scrollbar {
       display: none;
@@ -307,6 +376,7 @@ export default {
       scroll-snap-align: start;
       flex: 0 0 100vw;
       position: relative;
+      pointer-events: all;
     }
   }
 
@@ -322,11 +392,12 @@ export default {
   }
 
   .gesture {
-    height: 50vh;
+    height: 10vh;
     position: absolute;
     width: 100%;
     top: 72px;
     z-index: 100;
+    pointer-events: all;
   }
 
   .cta {

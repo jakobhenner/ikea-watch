@@ -23,7 +23,7 @@ export default {
 <style lang="scss" scoped>
 .navigation {
   position: fixed;
-  padding-top: var(--gutter);
+  padding-top: 40px;
   top: 0;
   left: var(--gutter);
   //background: var(--color-bg);
